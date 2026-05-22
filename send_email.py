@@ -38,7 +38,7 @@ def send_email():
     msg.attach(part)
 
     with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
-    server.login(sender, password)
+        server.login(sender, password)
         server.sendmail(sender, receiver, msg.as_string())
         print(f"发送成功！收件人：{receiver}")
 
