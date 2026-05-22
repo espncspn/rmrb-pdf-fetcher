@@ -1,0 +1,26 @@
+name: Run Article Crawler
+
+on:
+  workflow_dispatch:  # 允许手动触发
+  schedule:
+    - cron: '0 0 * * *'  # 每天午夜运行（可选）
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'  # 根据你的项目调整版本
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run crawler
+        run: |
+          python main.py  # 根据你的主文件调整
