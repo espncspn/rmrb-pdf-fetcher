@@ -8,36 +8,35 @@ from email.mime.text import MIMEText
 from email import encoders
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
 
 def txt_to_pdf(txt_path, pdf_path):
-    subprocess.run(["sudo", "apt-get", "install", "-y", "fonts-wqy-zenhei"], 
+    subprocess.run(["sudo", "apt-get", "install", "-y", "fonts-wqy-zenhei"],
                    capture_output=True)
     font_path = "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"
     pdfmetrics.registerFont(TTFont("WQY", font_path))
 
     with open(txt_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
+        content = f.read()
 
-    c = canvas.Canvas(pdf_path, pagesize=A4)
-    width, height = A4
-    c.setFont("WQY", 12)
-    margin = 50
-    y = height - margin
-    line_height = 20
-
-    for line in lines:
-        line = line.rstrip()
-        if y < margin:
-            c.showPage()
-            c.setFont("WQY", 12)
-            y = height - margin
-        c.drawString(margin, y, line)
-        y -= line_height
-
-    c.save()
+    doc = SimpleDocTemplate(pdf_path, pagesize=A4,
+                            leftMargin=15*mm, rightMargin=15*mm,
+                            topMargin=15*mm, bottomMargin=15*mm)
+    style = ParagraphStyle(name="Chinese", fontName="WQY", fontSize=11,
+                           leading=18, wordWrap="CJK")
+    story = []
+    for line in content.split("\n"):
+        line = line.strip()
+        if line:
+            story.append(Paragraph(line, style))
+            story.append(Spacer(1, 4))
+        else:
+            story.append(Spacer(1, 8))
+    doc.build(story)
 
 def send_email():
     smtp_host = os.environ.get("SMTP_HOST")
