@@ -6,6 +6,39 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
 from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import urllib.request
+
+def txt_to_pdf(txt_path, pdf_path):
+    font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf"
+    font_path = "NotoSansCJK.otf"
+    if not os.path.exists(font_path):
+        urllib.request.urlretrieve(font_url, font_path)
+    pdfmetrics.registerFont(TTFont("NotoSansCJK", font_path))
+
+    with open(txt_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    c = canvas.Canvas(pdf_path, pagesize=A4)
+    width, height = A4
+    c.setFont("NotoSansCJK", 12)
+    margin = 50
+    y = height - margin
+    line_height = 20
+
+    for line in lines:
+        line = line.rstrip()
+        if y < margin:
+            c.showPage()
+            c.setFont("NotoSansCJK", 12)
+            y = height - margin
+        c.drawString(margin, y, line)
+        y -= line_height
+
+    c.save()
 
 def send_email():
     smtp_host = os.environ.get("SMTP_HOST")
@@ -15,14 +48,16 @@ def send_email():
     receiver = os.environ.get("EMAIL_RECEIVER")
 
     today = datetime.now().strftime("%Y-%m-%d")
-    pdf_files = glob.glob("merged_articles.txt")
 
-    if not pdf_files:
-        print("未找到PDF文件")
+    txt_files = glob.glob("merged_articles.txt")
+    if not txt_files:
+        print("未找到文章文件")
         return
 
-    pdf_path = pdf_files[0]
-    print(f"找到PDF: {pdf_path}")
+    txt_path = txt_files[0]
+    pdf_path = f"rmrb-{today}.pdf"
+    print(f"正在转换PDF: {txt_path}")
+    txt_to_pdf(txt_path, pdf_path)
 
     msg = MIMEMultipart()
     msg["From"] = sender
@@ -34,7 +69,7 @@ def send_email():
         part = MIMEBase("application", "octet-stream")
         part.set_payload(f.read())
     encoders.encode_base64(part)
-    part.add_header("Content-Disposition", f'attachment; filename="rmrb-{today}.txt"')
+    part.add_header("Content-Disposition", f'attachment; filename="rmrb-{today}.pdf"')
     msg.attach(part)
 
     with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
