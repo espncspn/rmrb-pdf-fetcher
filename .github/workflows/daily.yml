@@ -16,7 +16,7 @@ jobs:
           python-version: '3.11'
 
       - name: 安装依赖
-        run: pip install requests PyPDF2 beautifulsoup4
+        run: pip install requests PyPDF2 beautifulsoup4 reportlab
 
       - name: 下载PDF
         run: python rmrb_merged.py
