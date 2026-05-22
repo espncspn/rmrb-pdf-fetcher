@@ -23,11 +23,11 @@ def txt_to_pdf(txt_path, pdf_path):
     with open(txt_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    doc = SimpleDocTemplate(pdf_path, pagesize=A4,
-                            leftMargin=15*mm, rightMargin=15*mm,
-                            topMargin=15*mm, bottomMargin=15*mm)
-    style = ParagraphStyle(name="Chinese", fontName="WQY", fontSize=11,
-                           leading=18, wordWrap="CJK")
+   doc = SimpleDocTemplate(pdf_path, pagesize=A4,
+                            leftMargin=25*mm, rightMargin=25*mm,
+                            topMargin=20*mm, bottomMargin=20*mm)
+    style = ParagraphStyle(name="Chinese", fontName="WQY", fontSize=14,
+                           leading=26, wordWrap="CJK")
     story = []
     for line in content.split("\n"):
         line = line.strip()
