@@ -34,7 +34,7 @@ def send_email():
         part = MIMEBase("application", "octet-stream")
         part.set_payload(f.read())
     encoders.encode_base64(part)
-    part.add_header("Content-Disposition", f'attachment; filename="rmrb-{today}.pdf"')
+    part.add_header("Content-Disposition", f'attachment; filename="rmrb-{today}.txt"')
     msg.attach(part)
 
     with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
