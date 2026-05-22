@@ -4,6 +4,8 @@ from urllib.parse import urljoin
 
 from datetime import datetime
 today = datetime.now().strftime("%Y%m/%d")
+from datetime import datetime
+today = datetime.now().strftime("%Y%m/%d")
 base_url = f"https://paper.people.com.cn/rmrb/pc/layout/{today}/node_01.html"
 root_url = "https://paper.people.com.cn/rmrb/"
 
