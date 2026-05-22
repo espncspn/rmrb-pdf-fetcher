@@ -2,8 +2,8 @@ name: 每日人民日报
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # UTC 0点 = 北京时间早上8点
-  workflow_dispatch:       # 允许手动触发测试
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   run:
@@ -11,13 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 安装中文字体
-        run: sudo apt-get install -y fonts-wqy-zenhei
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: 安装中文字体
-       run: sudo apt-get install -y fonts-wqy-zenhei
+        run: sudo apt-get install -y fonts-wqy-zenhei
 
       - name: 安装依赖
         run: pip install requests PyPDF2 beautifulsoup4 reportlab
