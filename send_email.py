@@ -1,6 +1,7 @@
 import smtplib
 import os
 import glob
+import subprocess
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
@@ -10,21 +11,19 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-import urllib.request
 
 def txt_to_pdf(txt_path, pdf_path):
-    font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf"
-    font_path = "NotoSansCJK.otf"
-    if not os.path.exists(font_path):
-        urllib.request.urlretrieve(font_url, font_path)
-    pdfmetrics.registerFont(TTFont("NotoSansCJK", font_path))
+    subprocess.run(["sudo", "apt-get", "install", "-y", "fonts-wqy-zenhei"], 
+                   capture_output=True)
+    font_path = "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"
+    pdfmetrics.registerFont(TTFont("WQY", font_path))
 
     with open(txt_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
-    c.setFont("NotoSansCJK", 12)
+    c.setFont("WQY", 12)
     margin = 50
     y = height - margin
     line_height = 20
@@ -33,7 +32,7 @@ def txt_to_pdf(txt_path, pdf_path):
         line = line.rstrip()
         if y < margin:
             c.showPage()
-            c.setFont("NotoSansCJK", 12)
+            c.setFont("WQY", 12)
             y = height - margin
         c.drawString(margin, y, line)
         y -= line_height
