@@ -1,26 +1,31 @@
-name: Run Article Crawler
+name: 每日人民日报
 
 on:
-  workflow_dispatch:  # 允许手动触发
   schedule:
-    - cron: '0 0 * * *'  # 每天午夜运行（可选）
+    - cron: '0 0 * * *'  # UTC 0点 = 北京时间早上8点
+  workflow_dispatch:       # 允许手动触发测试
 
 jobs:
-  crawl:
+  run:
     runs-on: ubuntu-latest
-    
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.x'  # 根据你的项目调整版本
-      
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-      
-      - name: Run crawler
-        run: |
-          python main.py  # 根据你的主文件调整
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install requests PyPDF2 beautifulsoup4
+
+      - name: 下载PDF
+        run: python rmrb_merged.py
+
+      - name: 发送邮件
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
+        run: python send_email.py
