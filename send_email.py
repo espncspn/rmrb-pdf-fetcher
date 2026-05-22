@@ -15,7 +15,7 @@ def send_email():
     receiver = os.environ.get("EMAIL_RECEIVER")
 
     today = datetime.now().strftime("%Y-%m-%d")
-    pdf_files = glob.glob("**/*.txt", recursive=True) + glob.glob("*.txt")
+    pdf_files = glob.glob("merged_articles.txt")
 
     if not pdf_files:
         print("未找到PDF文件")
