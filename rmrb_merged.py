@@ -2,8 +2,9 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-# ====== 1. 设置基础参数 ======
-base_url = "https://paper.people.com.cn/rmrb/pc/layout/202510/19/node_01.html"
+from datetime import datetime
+today = datetime.now().strftime("%Y%m/%d")
+base_url = f"https://paper.people.com.cn/rmrb/pc/layout/{today}/node_01.html"
 root_url = "https://paper.people.com.cn/rmrb/"
 
 # ====== 2. 获取页面并解析 ======
