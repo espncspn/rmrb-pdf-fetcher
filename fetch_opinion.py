@@ -8,7 +8,7 @@ def fetch_opinion():
     base_url = "http://opinion.people.com.cn/GB/159301/"
     
     response = requests.get(base_url)
-    response.encoding = "gbk"
+    response.encoding = "gb18030"
     soup = BeautifulSoup(response.text, "html.parser")
     
     articles = []
@@ -28,7 +28,7 @@ def fetch_opinion():
         try:
             print(f"正在下载 {i+1}/{len(articles)}: {title}")
             r = requests.get(url)
-            r.encoding = "gbk"
+            r.encoding = "gb18030"
             s = BeautifulSoup(r.text, "html.parser")
             body = s.find("div", class_="rm_txt_con") or s.find("div", id="rwb_zw")
             if body:
