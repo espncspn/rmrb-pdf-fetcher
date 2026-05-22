@@ -13,8 +13,31 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate
+from reportlab.pdfgen import canvas as pdfcanvas
+from reportlab.lib import colors
+
+class BookmarkDocTemplate(BaseDocTemplate):
+    def __init__(self, filename, **kwargs):
+        super().__init__(filename, **kwargs)
+        frame = Frame(self.leftMargin, self.bottomMargin,
+                      self.width, self.height, id="normal")
+        template = PageTemplate(id="main", frames=frame)
+        self.addPageTemplates([template])
+        self.bookmarks = []
+
+    def afterFlowable(self, flowable):
+        if hasattr(flowable, "bookmark_key"):
+            key = flowable.bookmark_key
+            title = flowable.bookmark_title
+            self.canv.bookmarkPage(key)
+            self.canv.addOutlineEntry(title, key, level=0, closed=False)
+
+class BookmarkParagraph(Paragraph):
+    def __init__(self, text, style, bookmark_key=None, bookmark_title=None):
+        super().__init__(text, style)
+        self.bookmark_key = bookmark_key
+        self.bookmark_title = bookmark_title
 
 def txt_to_pdf(txt_path, pdf_path):
     subprocess.run(["sudo", "apt-get", "install", "-y", "fonts-wqy-zenhei"],
@@ -27,68 +50,46 @@ def txt_to_pdf(txt_path, pdf_path):
 
     heading_style = ParagraphStyle(
         name="Heading", fontName="WQY", fontSize=15,
-        leading=28, wordWrap="CJK", spaceAfter=6,
-        textColor="#000000", fontWeight="bold"
+        leading=28, wordWrap="CJK", spaceAfter=6
     )
     body_style = ParagraphStyle(
         name="Chinese", fontName="WQY", fontSize=13,
         leading=24, wordWrap="CJK"
     )
-    toc_style = ParagraphStyle(
-        name="TOC", fontName="WQY", fontSize=13,
-        leading=24, wordWrap="CJK"
-    )
-
-    toc = TableOfContents()
-    toc.levelStyles = [toc_style]
 
     story = []
-    # 目录页
-    story.append(Paragraph("目　录", heading_style))
-    story.append(Spacer(1, 6))
-    story.append(toc)
-    story.append(PageBreak())
+    bookmark_count = 0
 
-    # 正文
     for line in content.split("\n"):
         line = line.strip()
         if not line:
             story.append(Spacer(1, 8))
         elif line.startswith("【") and line.endswith("】"):
-            # 文章标题
-            p = Paragraph(line, heading_style)
-            p._bookmarkName = line
+            key = f"bookmark_{bookmark_count}"
+            bookmark_count += 1
+            p = BookmarkParagraph(line, heading_style,
+                                  bookmark_key=key,
+                                  bookmark_title=line.strip("【】"))
             story.append(p)
             story.append(Spacer(1, 4))
-        elif line.startswith("====="):
-            # 分节标题
-            p = Paragraph(line.replace("=", "").strip(), heading_style)
-            p._bookmarkName = line
-            story.append(p)
-            story.append(Spacer(1, 4))
+        elif "=====" in line:
+            title = line.replace("=", "").strip()
+            if title:
+                key = f"bookmark_{bookmark_count}"
+                bookmark_count += 1
+                p = BookmarkParagraph(title, heading_style,
+                                      bookmark_key=key,
+                                      bookmark_title=title)
+                story.append(p)
+                story.append(Spacer(1, 4))
         else:
             story.append(Paragraph(line, body_style))
             story.append(Spacer(1, 4))
 
-    class MyDocTemplate(BaseDocTemplate):
-        def __init__(self, filename, **kwargs):
-            super().__init__(filename, **kwargs)
-            frame = Frame(self.leftMargin, self.bottomMargin,
-                          self.width, self.height, id="normal")
-            template = PageTemplate(id="main", frames=frame)
-            self.addPageTemplates([template])
-
-        def afterFlowable(self, flowable):
-            if flowable.__class__.__name__ == "Paragraph":
-                style = flowable.style.name
-                if style == "Heading":
-                    text = flowable.getPlainText()
-                    self.notify("TOCEntry", (0, text, self.page))
-
-    doc = MyDocTemplate(pdf_path, pagesize=A4,
-                        leftMargin=25*mm, rightMargin=25*mm,
-                        topMargin=20*mm, bottomMargin=20*mm)
-    doc.multiBuild(story)
+    doc = BookmarkDocTemplate(pdf_path, pagesize=A4,
+                              leftMargin=25*mm, rightMargin=25*mm,
+                              topMargin=20*mm, bottomMargin=20*mm)
+    doc.build(story)
 
 def send_email():
     smtp_host = os.environ.get("SMTP_HOST")
