@@ -9,14 +9,14 @@ from datetime import datetime
 
 def send_email():
     smtp_host = os.environ.get("SMTP_HOST")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_port = int(os.environ.get("SMTP_PORT", "465"))
     sender = os.environ.get("EMAIL_SENDER")
     password = os.environ.get("EMAIL_PASSWORD")
     receiver = os.environ.get("EMAIL_RECEIVER")
 
     today = datetime.now().strftime("%Y-%m-%d")
     pdf_files = glob.glob("**/*.pdf", recursive=True) + glob.glob("*.pdf")
-    
+
     if not pdf_files:
         print("未找到PDF文件")
         return
