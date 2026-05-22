@@ -23,7 +23,7 @@ def txt_to_pdf(txt_path, pdf_path):
     with open(txt_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-   doc = SimpleDocTemplate(pdf_path, pagesize=A4,
+    doc = SimpleDocTemplate(pdf_path, pagesize=A4,
                             leftMargin=25*mm, rightMargin=25*mm,
                             topMargin=20*mm, bottomMargin=20*mm)
     style = ParagraphStyle(name="Chinese", fontName="WQY", fontSize=14,
@@ -55,7 +55,6 @@ def send_email():
     txt_path = txt_files[0]
     pdf_path = f"rmrb-{today}.pdf"
 
-    # 合并评论文件
     opinion_files = glob.glob("opinion_articles.txt")
     if opinion_files:
         with open(txt_path, "a", encoding="utf-8") as f:
@@ -63,6 +62,7 @@ def send_email():
             with open(opinion_files[0], "r", encoding="utf-8") as op:
                 f.write(op.read())
         print("已合并评论内容")
+
     print(f"正在转换PDF: {txt_path}")
     txt_to_pdf(txt_path, pdf_path)
 
