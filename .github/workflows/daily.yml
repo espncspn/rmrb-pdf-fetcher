@@ -23,6 +23,8 @@ jobs:
 
       - name: 下载PDF
         run: python rmrb_merged.py
+        - name: 抓取人民网评论
+        run: python fetch_opinion.py
 
       - name: 发送邮件
         env:
