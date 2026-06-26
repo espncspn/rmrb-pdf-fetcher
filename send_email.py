@@ -19,6 +19,9 @@ from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate
 from reportlab.pdfgen import canvas as pdfcanvas
 from reportlab.lib import colors
 
+BODY_FAUX_BOLD_OFFSET = 0.18
+HEADING_FAUX_BOLD_OFFSET = 0.22
+
 class BookmarkDocTemplate(BaseDocTemplate):
     def __init__(self, filename, **kwargs):
         super().__init__(filename, **kwargs)
@@ -35,9 +38,26 @@ class BookmarkDocTemplate(BaseDocTemplate):
             self.canv.bookmarkPage(key)
             self.canv.addOutlineEntry(title, key, level=0, closed=False)
 
-class BookmarkParagraph(Paragraph):
-    def __init__(self, text, style, bookmark_key=None, bookmark_title=None):
-        super().__init__(text, style)
+class FauxBoldParagraph(Paragraph):
+    def __init__(self, text, style, bold_offset=BODY_FAUX_BOLD_OFFSET, **kwargs):
+        super().__init__(text, style, **kwargs)
+        self.bold_offset = bold_offset
+
+    def draw(self):
+        super().draw()
+        if self.bold_offset:
+            self.canv.saveState()
+            self.canv.translate(self.bold_offset, 0)
+            super().draw()
+            self.canv.restoreState()
+
+class BookmarkParagraph(FauxBoldParagraph):
+    def __init__(
+        self, text, style, bookmark_key=None, bookmark_title=None, **kwargs
+    ):
+        super().__init__(
+            text, style, bold_offset=HEADING_FAUX_BOLD_OFFSET, **kwargs
+        )
         self.bookmark_key = bookmark_key
         self.bookmark_title = bookmark_title
 
@@ -180,7 +200,7 @@ def txt_to_pdf(txt_path, pdf_path):
                 story.append(p)
                 story.append(Spacer(1, 6))
         else:
-            story.append(Paragraph(escape(line), body_style))
+            story.append(FauxBoldParagraph(escape(line), body_style))
             story.append(Spacer(1, 5))
 
     doc = BookmarkDocTemplate(pdf_path, pagesize=A4,
