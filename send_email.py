@@ -32,11 +32,12 @@ class BookmarkDocTemplate(BaseDocTemplate):
         self.bookmarks = []
 
     def afterFlowable(self, flowable):
-        if hasattr(flowable, "bookmark_key"):
+        if hasattr(flowable, "bookmark_key") and flowable.bookmark_key:
             key = flowable.bookmark_key
             title = flowable.bookmark_title
+            level = flowable.bookmark_level
             self.canv.bookmarkPage(key)
-            self.canv.addOutlineEntry(title, key, level=0, closed=False)
+            self.canv.addOutlineEntry(title, key, level=level, closed=False)
 
 class FauxBoldParagraph(Paragraph):
     def __init__(self, text, style, bold_offset=BODY_FAUX_BOLD_OFFSET, **kwargs):
@@ -53,13 +54,15 @@ class FauxBoldParagraph(Paragraph):
 
 class BookmarkParagraph(FauxBoldParagraph):
     def __init__(
-        self, text, style, bookmark_key=None, bookmark_title=None, **kwargs
+        self, text, style, bookmark_key=None, bookmark_title=None,
+        bookmark_level=0, **kwargs
     ):
         super().__init__(
             text, style, bold_offset=HEADING_FAUX_BOLD_OFFSET, **kwargs
         )
         self.bookmark_key = bookmark_key
         self.bookmark_title = bookmark_title
+        self.bookmark_level = bookmark_level
 
 def install_linux_cjk_font():
     if os.name == "nt":
@@ -176,6 +179,7 @@ def txt_to_pdf(txt_path, pdf_path):
 
     story = []
     bookmark_count = 0
+    comment_section = False
 
     for line in content.split("\n"):
         line = line.strip()
@@ -186,17 +190,22 @@ def txt_to_pdf(txt_path, pdf_path):
             bookmark_count += 1
             p = BookmarkParagraph(escape(line), heading_style,
                                   bookmark_key=key,
-                                  bookmark_title=line.strip("【】"))
+                                  bookmark_title=line.strip("【】"),
+                                  bookmark_level=1 if comment_section else 0)
             story.append(p)
             story.append(Spacer(1, 6))
         elif "=====" in line:
             title = line.replace("=", "").strip()
             if title:
+                comment_section = "人民网每日评论" in title
+                if comment_section and story:
+                    story.append(PageBreak())
                 key = f"bookmark_{bookmark_count}"
                 bookmark_count += 1
                 p = BookmarkParagraph(escape(title), heading_style,
                                       bookmark_key=key,
-                                      bookmark_title=title)
+                                      bookmark_title=title,
+                                      bookmark_level=0)
                 story.append(p)
                 story.append(Spacer(1, 6))
         else:
