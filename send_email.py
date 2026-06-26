@@ -1,7 +1,9 @@
 import smtplib
 import os
 import glob
+import shutil
 import subprocess
+from html import escape
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
@@ -39,22 +41,117 @@ class BookmarkParagraph(Paragraph):
         self.bookmark_key = bookmark_key
         self.bookmark_title = bookmark_title
 
+def install_linux_cjk_font():
+    if os.name == "nt":
+        return
+    if os.path.exists("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"):
+        return
+
+    apt_get = shutil.which("apt-get")
+    if not apt_get:
+        return
+
+    sudo = shutil.which("sudo")
+    command = [apt_get, "install", "-y", "fonts-noto-cjk", "fonts-wqy-zenhei"]
+    if sudo:
+        command.insert(0, sudo)
+
+    subprocess.run(command, capture_output=True, check=False)
+
+def register_first_available_font(candidates):
+    last_error = None
+    for font_name, paths in candidates:
+        for font_path in paths:
+            if not font_path or not os.path.exists(font_path):
+                continue
+            try:
+                pdfmetrics.registerFont(TTFont(font_name, font_path))
+                return font_name, None
+            except Exception as exc:
+                last_error = exc
+
+    return None, last_error
+
+def register_pdf_fonts():
+    install_linux_cjk_font()
+
+    project_dir = os.path.dirname(os.path.abspath(__file__))
+    simhei_paths = [
+        os.environ.get("RMRB_PDF_FONT_PATH"),
+        os.path.join(project_dir, "fonts", "simhei.ttf"),
+        os.path.join(project_dir, "fonts", "SimHei.ttf"),
+        r"C:\Windows\Fonts\simhei.ttf",
+        "/usr/local/share/fonts/simhei.ttf",
+        "/usr/share/fonts/truetype/simhei.ttf",
+        "/usr/share/fonts/truetype/windows/simhei.ttf",
+    ]
+    wqy_paths = [
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/wenquanyi/wqy-zenhei/wqy-zenhei.ttc",
+    ]
+
+    simhei_font, simhei_error = register_first_available_font(
+        [("SimHei", simhei_paths)]
+    )
+    if simhei_font:
+        print(f"PDF字体: 正文={simhei_font}, 标题={simhei_font}")
+        return simhei_font, simhei_font
+
+    body_font, body_error = register_first_available_font(
+        [
+            (
+                "NotoSansCJK",
+                [
+                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
+                ],
+            ),
+            ("WQYZenHei", wqy_paths),
+        ]
+    )
+    heading_font, heading_error = register_first_available_font(
+        [
+            (
+                "NotoSansCJKBold",
+                [
+                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.otf",
+                ],
+            ),
+            (
+                "NotoSansCJK",
+                [
+                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
+                ],
+            ),
+            ("WQYZenHei", wqy_paths),
+        ]
+    )
+
+    if body_font:
+        heading_font = heading_font or body_font
+        print(f"PDF字体: 正文={body_font}, 标题={heading_font}")
+        return body_font, heading_font
+
+    raise RuntimeError(
+        "未找到可用中文字体，PDF生成失败: "
+        f"{body_error or heading_error or simhei_error}"
+    )
+
 def txt_to_pdf(txt_path, pdf_path):
-    subprocess.run(["sudo", "apt-get", "install", "-y", "fonts-wqy-zenhei"],
-                   capture_output=True)
-    font_path = "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"
-    pdfmetrics.registerFont(TTFont("WQY", font_path))
+    body_font, heading_font = register_pdf_fonts()
 
     with open(txt_path, "r", encoding="utf-8") as f:
         content = f.read()
 
     heading_style = ParagraphStyle(
-        name="Heading", fontName="WQY", fontSize=15,
-        leading=28, wordWrap="CJK", spaceAfter=6
+        name="Heading", fontName=heading_font, fontSize=18,
+        leading=32, wordWrap="CJK", spaceAfter=8
     )
     body_style = ParagraphStyle(
-        name="Chinese", fontName="WQY", fontSize=13,
-        leading=24, wordWrap="CJK"
+        name="Chinese", fontName=body_font, fontSize=15,
+        leading=28, wordWrap="CJK"
     )
 
     story = []
@@ -63,32 +160,32 @@ def txt_to_pdf(txt_path, pdf_path):
     for line in content.split("\n"):
         line = line.strip()
         if not line:
-            story.append(Spacer(1, 8))
+            story.append(Spacer(1, 10))
         elif line.startswith("【") and line.endswith("】"):
             key = f"bookmark_{bookmark_count}"
             bookmark_count += 1
-            p = BookmarkParagraph(line, heading_style,
+            p = BookmarkParagraph(escape(line), heading_style,
                                   bookmark_key=key,
                                   bookmark_title=line.strip("【】"))
             story.append(p)
-            story.append(Spacer(1, 4))
+            story.append(Spacer(1, 6))
         elif "=====" in line:
             title = line.replace("=", "").strip()
             if title:
                 key = f"bookmark_{bookmark_count}"
                 bookmark_count += 1
-                p = BookmarkParagraph(title, heading_style,
+                p = BookmarkParagraph(escape(title), heading_style,
                                       bookmark_key=key,
                                       bookmark_title=title)
                 story.append(p)
-                story.append(Spacer(1, 4))
+                story.append(Spacer(1, 6))
         else:
-            story.append(Paragraph(line, body_style))
-            story.append(Spacer(1, 4))
+            story.append(Paragraph(escape(line), body_style))
+            story.append(Spacer(1, 5))
 
     doc = BookmarkDocTemplate(pdf_path, pagesize=A4,
-                              leftMargin=25*mm, rightMargin=25*mm,
-                              topMargin=20*mm, bottomMargin=20*mm)
+                              leftMargin=27*mm, rightMargin=27*mm,
+                              topMargin=22*mm, bottomMargin=22*mm)
     doc.build(story)
 
 def send_email():
